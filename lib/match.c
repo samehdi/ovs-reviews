@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2010, 2011, 2012, 2013, 2014, 2015 Nicira, Inc.
+ * Copyright (c) 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016 Nicira, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1162,7 +1162,9 @@ match_format(const struct match *match, struct ds *s, int priority)
 
     format_be64_masked(s, "metadata", f->metadata, wc->masks.metadata);
 
-    if (wc->masks.in_port.ofp_port) {
+    if (wc->masks.in_port.odp_port == UINT32_MAX) {
+        ds_put_format(s, "in_port=%"PRIu32",", f->in_port.odp_port);
+    } else if (wc->masks.in_port.ofp_port) {
         ds_put_cstr(s, "in_port=");
         ofputil_format_port(f->in_port.ofp_port, s);
         ds_put_char(s, ',');
