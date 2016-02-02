@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, 2013, 2014 Nicira, Inc.
+ * Copyright (c) 2010, 2011, 2013, 2014, 2016 Nicira, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,7 +116,7 @@ typedef struct {
 /* ofp_port_t represents the port number of a OpenFlow switch.
  * odp_port_t represents the port number on the datapath.
  * ofp11_port_t represents the OpenFlow-1.1 port number. */
-typedef uint16_t OVS_BITWISE ofp_port_t;
+typedef uint32_t OVS_BITWISE ofp_port_t;
 typedef uint32_t OVS_BITWISE odp_port_t;
 typedef uint32_t OVS_BITWISE ofp11_port_t;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, 2013, 2014, 2015 Nicira, Inc.
+ * Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016 Nicira, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -148,9 +148,9 @@ learn_execute(const struct ofpact_learn *learn, const struct flow *flow,
         case NX_LEARN_DST_OUTPUT:
             if (spec->n_bits <= 16
                 || is_all_zeros(value.u8, sizeof value - 2)) {
-                ofp_port_t port = u16_to_ofp(ntohll(value.integer));
+                ofp_port_t port = u32_to_ofp(ntohll(value.integer));
 
-                if (ofp_to_u16(port) < ofp_to_u16(OFPP_MAX)
+                if (ofp_to_u32(port) < ofp_to_u32(OFPP_MAX)
                     || port == OFPP_IN_PORT
                     || port == OFPP_FLOOD
                     || port == OFPP_LOCAL

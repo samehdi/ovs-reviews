@@ -133,7 +133,7 @@ match_set_xreg_masked(struct match *match, unsigned int xreg_idx,
 void
 match_set_actset_output(struct match *match, ofp_port_t actset_output)
 {
-    match->wc.masks.actset_output = u16_to_ofp(UINT16_MAX);
+    match->wc.masks.actset_output = u32_to_ofp(UINT32_MAX);
     match->flow.actset_output = actset_output;
 }
 
@@ -290,7 +290,7 @@ match_set_tun_gbp_flags(struct match *match, uint8_t flags)
 void
 match_set_in_port(struct match *match, ofp_port_t ofp_port)
 {
-    match->wc.masks.in_port.ofp_port = u16_to_ofp(UINT16_MAX);
+    match->wc.masks.in_port.ofp_port = u16_to_ofp(UINT32_MAX);
     match->flow.in_port.ofp_port = ofp_port;
 }
 

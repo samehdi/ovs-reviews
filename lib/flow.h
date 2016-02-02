@@ -109,7 +109,6 @@ struct flow {
     ovs_u128 ct_label;          /* Connection label. */
     uint32_t conj_id;           /* Conjunction ID. */
     ofp_port_t actset_output;   /* Output port in action set. */
-    uint8_t pad2[2];            /* Pad to 64 bits. */
 
     /* L2, Order the same as in the Ethernet header! (64-bit aligned) */
     struct eth_addr dl_dst;     /* Ethernet destination address. */
@@ -266,10 +265,10 @@ flow_hash(const struct flow *flow, uint32_t basis)
     return hash_bytes64((const uint64_t *)flow, sizeof *flow, basis);
 }
 
-static inline uint16_t
-ofp_to_u16(ofp_port_t ofp_port)
+static inline uint32_t
+ofp_to_u32(ofp_port_t ofp_port)
 {
-    return (OVS_FORCE uint16_t) ofp_port;
+    return (OVS_FORCE uint32_t) ofp_port;
 }
 
 static inline uint32_t
@@ -285,7 +284,7 @@ ofp11_to_u32(ofp11_port_t ofp11_port)
 }
 
 static inline ofp_port_t
-u16_to_ofp(uint16_t port)
+u32_to_ofp(uint32_t port)
 {
     return OFP_PORT_C(port);
 }
@@ -305,7 +304,7 @@ u32_to_ofp11(uint32_t port)
 static inline uint32_t
 hash_ofp_port(ofp_port_t ofp_port)
 {
-    return hash_int(ofp_to_u16(ofp_port), 0);
+    return hash_int(ofp_to_u32(ofp_port), 0);
 }
 
 static inline uint32_t
