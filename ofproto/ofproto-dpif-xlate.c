@@ -4262,11 +4262,6 @@ execute_controller_action(struct xlate_ctx *ctx, int len,
         return;
     }
 
-    if (packet->packet_type != htonl(PT_ETH)) {
-        dp_packet_delete(packet);
-        return;
-    }
-
     /* A packet sent by an action in a table-miss rule is considered an
      * explicit table miss.  OpenFlow before 1.3 doesn't have that concept so
      * it will get translated back to OFPR_ACTION for those versions. */
@@ -4299,6 +4294,11 @@ execute_controller_action(struct xlate_ctx *ctx, int len,
         },
     };
     flow_get_metadata(&ctx->xin->flow, &am->pin.up.public.flow_metadata);
+
+    /* Send packet_type only from packet-type-aware bridges. */
+    if (!ctx->xbridge->packet_type_aware) {
+        am->pin.up.public.flow_metadata.wc.masks.packet_type = 0;
+    }
 
     /* Async messages are only sent once, so if we send one now, no
      * xlate cache entry is created.  */
