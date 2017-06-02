@@ -885,8 +885,9 @@ static void
 nxm_put_ip(struct ofpbuf *b, const struct match *match, enum ofp_version oxm)
 {
     const struct flow *flow = &match->flow;
+    ovs_be16 dl_type = get_dl_type(flow);
 
-    if (flow->dl_type == htons(ETH_TYPE_IP)) {
+    if (dl_type == htons(ETH_TYPE_IP)) {
         nxm_put_32m(b, MFF_IPV4_SRC, oxm,
                     flow->nw_src, match->wc.masks.nw_src);
         nxm_put_32m(b, MFF_IPV4_DST, oxm,
@@ -995,10 +996,17 @@ nx_put_raw(struct ofpbuf *b, enum ofp_version oxm, const struct match *match,
 {
     const struct flow *flow = &match->flow;
     const size_t start_len = b->size;
+    ovs_be16 dl_type = get_dl_type(flow);
     int match_len;
     int i;
 
     BUILD_ASSERT_DECL(FLOW_WC_SEQ == 39);
+
+    /* OpenFlow Packet Type. Must be first. */
+    if (match->wc.masks.packet_type) {
+        nxm_put_32m(b, MFF_PACKET_TYPE, oxm, flow->packet_type,
+                    match->wc.masks.packet_type);
+    }
 
     /* Metadata. */
     if (match->wc.masks.dp_hash) {
@@ -1061,7 +1069,7 @@ nx_put_raw(struct ofpbuf *b, enum ofp_version oxm, const struct match *match,
     }
 
     /* MPLS. */
-    if (eth_type_mpls(flow->dl_type)) {
+    if (eth_type_mpls(dl_type)) {
         if (match->wc.masks.mpls_lse[0] & htonl(MPLS_TC_MASK)) {
             nxm_put_8(b, MFF_MPLS_TC, oxm,
                       mpls_lse_to_tc(flow->mpls_lse[0]));
@@ -1081,8 +1089,8 @@ nx_put_raw(struct ofpbuf *b, enum ofp_version oxm, const struct match *match,
     /* L3. */
     if (is_ip_any(flow)) {
         nxm_put_ip(b, match, oxm);
-    } else if (flow->dl_type == htons(ETH_TYPE_ARP) ||
-               flow->dl_type == htons(ETH_TYPE_RARP)) {
+    } else if (dl_type == htons(ETH_TYPE_ARP) ||
+               dl_type == htons(ETH_TYPE_RARP)) {
         /* ARP. */
         if (match->wc.masks.nw_proto) {
             nxm_put_16(b, MFF_ARP_OP, oxm,

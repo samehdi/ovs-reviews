@@ -517,6 +517,12 @@ parse_ofp_str__(struct ofputil_flow_mod *fm, int command, char *string,
             return error;
         }
     }
+    /* Copy ethertype to flow->dl_type for matches on packet_type
+     * (OFPHTN_ETHERTYPE, ethertype). */
+    if (fm->match.wc.masks.packet_type == OVS_BE32_MAX &&
+            pt_ns(fm->match.flow.packet_type) == OFPHTN_ETHERTYPE) {
+        fm->match.flow.dl_type = pt_ns_type_be(fm->match.flow.packet_type);
+    }
     /* Check for usable protocol interdependencies between match fields. */
     if (fm->match.flow.dl_type == htons(ETH_TYPE_IPV6)) {
         const struct flow_wildcards *wc = &fm->match.wc;

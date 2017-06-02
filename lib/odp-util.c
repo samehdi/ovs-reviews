@@ -4350,6 +4350,50 @@ parse_odp_key_mask_attr(const char *s, const struct simap *port_names,
         return s - start;
     }
 
+    /* Packet_type open-coded. */
+    if (strncmp(s, "packet_type(", strlen("packet_type(")) == 0) {
+        const char *start = s;
+        ovs_be32 skey = 0;
+        ovs_be32 smask = 0;
+        int len;
+        uint16_t  ns = 0;
+        uint16_t  ns_type = 0;
+
+        s += strlen("packet_type(");
+        if (ovs_scan(s, "ns=%"SCNu16",id=%n", &ns, &len)){
+            if (len == 0) {
+                return -EINVAL;
+            }
+            s += len;
+            if (strncmp(s, "*", 1) == 0) {
+                s++;
+            } else if (ovs_scan(s, "0x%"SCNx16"%n", &ns_type, &len)) {
+                s += len;
+                skey = PACKET_TYPE_BE(ns, ns_type);
+                if ( *s == '/' ) {
+                    uint16_t  ns_type_mask = 0;
+                    if (ovs_scan(s, "/0x%"SCNx16"%n", &ns_type_mask, &len)) {
+                        s += len;
+                        smask = PACKET_TYPE_BE(ns, ns_type_mask);
+                    }
+                }
+            }
+
+            if (*s++ != ')') {
+                return -EINVAL;
+            }
+
+            nl_msg_put_unspec(key, OVS_KEY_ATTR_PACKET_TYPE, &skey,
+                              sizeof(skey));
+            if (mask) {
+                nl_msg_put_unspec(mask, OVS_KEY_ATTR_PACKET_TYPE, &smask,
+                                  sizeof(smask));
+            }
+        }
+
+        return s - start;
+    }
+
     return -EINVAL;
 }
 
@@ -4500,9 +4544,7 @@ odp_flow_key_from_flow__(const struct odp_flow_key_parms *parms,
         nl_msg_put_odp_port(buf, OVS_KEY_ATTR_IN_PORT, data->in_port.odp_port);
     }
 
-    if (export_mask || flow->packet_type != htonl(PT_ETH)) {
-        nl_msg_put_be32(buf, OVS_KEY_ATTR_PACKET_TYPE, data->packet_type);
-    }
+    nl_msg_put_be32(buf, OVS_KEY_ATTR_PACKET_TYPE, data->packet_type);
 
     if (OVS_UNLIKELY(parms->probe)) {
         max_vlans = FLOW_MAX_VLAN_HEADERS;

@@ -1174,8 +1174,8 @@ match_format(const struct match *match,
     size_t start_len = s->length;
     const struct flow *f = &match->flow;
     bool skip_type = false;
-
     bool skip_proto = false;
+    ovs_be16 dl_type = f->dl_type;
 
     int i;
 
@@ -1257,24 +1257,16 @@ match_format(const struct match *match,
     }
 
     if (wc->masks.packet_type) {
-        if (pt_ns_type_be(wc->masks.packet_type) == 0) {
-            ds_put_format(s, "packet_type=(%u,*),",
-                          pt_ns(f->packet_type));
-        } else if (pt_ns_type_be(wc->masks.packet_type) == OVS_BE16_MAX) {
-            ds_put_format(s, "packet_type=(%u,%#"PRIx16"),",
-                          pt_ns(f->packet_type),
-                          pt_ns_type(f->packet_type));
-        } else {
-            ds_put_format(s, "packet_type=(%u,%#"PRIx16"/%#"PRIx16"),",
-                          pt_ns(f->packet_type),
-                          pt_ns_type(f->packet_type),
-                          pt_ns_type(wc->masks.packet_type));
+        format_packet_type_masked(s, f->packet_type, wc->masks.packet_type);
+        if (pt_ns(f->packet_type) == OFPHTN_ETHERTYPE) {
+            dl_type = pt_ns_type_be(f->packet_type);
         }
     }
 
     if (wc->masks.dl_type) {
+        dl_type = f->dl_type;
         skip_type = true;
-        if (f->dl_type == htons(ETH_TYPE_IP)) {
+        if (dl_type == htons(ETH_TYPE_IP)) {
             if (wc->masks.nw_proto) {
                 skip_proto = true;
                 if (f->nw_proto == IPPROTO_ICMP) {
@@ -1294,7 +1286,7 @@ match_format(const struct match *match,
             } else {
                 ds_put_format(s, "%sip%s,", colors.value, colors.end);
             }
-        } else if (f->dl_type == htons(ETH_TYPE_IPV6)) {
+        } else if (dl_type == htons(ETH_TYPE_IPV6)) {
             if (wc->masks.nw_proto) {
                 skip_proto = true;
                 if (f->nw_proto == IPPROTO_ICMPV6) {
@@ -1312,13 +1304,13 @@ match_format(const struct match *match,
             } else {
                 ds_put_format(s, "%sipv6%s,", colors.value, colors.end);
             }
-        } else if (f->dl_type == htons(ETH_TYPE_ARP)) {
+        } else if (dl_type == htons(ETH_TYPE_ARP)) {
             ds_put_format(s, "%sarp%s,", colors.value, colors.end);
-        } else if (f->dl_type == htons(ETH_TYPE_RARP)) {
+        } else if (dl_type == htons(ETH_TYPE_RARP)) {
             ds_put_format(s, "%srarp%s,", colors.value, colors.end);
-        } else if (f->dl_type == htons(ETH_TYPE_MPLS)) {
+        } else if (dl_type == htons(ETH_TYPE_MPLS)) {
             ds_put_format(s, "%smpls%s,", colors.value, colors.end);
-        } else if (f->dl_type == htons(ETH_TYPE_MPLS_MCAST)) {
+        } else if (dl_type == htons(ETH_TYPE_MPLS_MCAST)) {
             ds_put_format(s, "%smplsm%s,", colors.value, colors.end);
         } else {
             skip_type = false;
@@ -1390,9 +1382,9 @@ match_format(const struct match *match,
 
     if (!skip_type && wc->masks.dl_type) {
         ds_put_format(s, "%sdl_type=%s0x%04"PRIx16",",
-                      colors.param, colors.end, ntohs(f->dl_type));
+                      colors.param, colors.end, ntohs(dl_type));
     }
-    if (f->dl_type == htons(ETH_TYPE_IPV6)) {
+    if (dl_type == htons(ETH_TYPE_IPV6)) {
         format_ipv6_netmask(s, "ipv6_src", &f->ipv6_src, &wc->masks.ipv6_src);
         format_ipv6_netmask(s, "ipv6_dst", &f->ipv6_dst, &wc->masks.ipv6_dst);
         if (wc->masks.ipv6_label) {
@@ -1406,8 +1398,8 @@ match_format(const struct match *match,
                               ntohl(wc->masks.ipv6_label));
             }
         }
-    } else if (f->dl_type == htons(ETH_TYPE_ARP) ||
-               f->dl_type == htons(ETH_TYPE_RARP)) {
+    } else if (dl_type == htons(ETH_TYPE_ARP) ||
+               dl_type == htons(ETH_TYPE_RARP)) {
         format_ip_netmask(s, "arp_spa", f->nw_src, wc->masks.nw_src);
         format_ip_netmask(s, "arp_tpa", f->nw_dst, wc->masks.nw_dst);
     } else {
@@ -1415,8 +1407,8 @@ match_format(const struct match *match,
         format_ip_netmask(s, "nw_dst", f->nw_dst, wc->masks.nw_dst);
     }
     if (!skip_proto && wc->masks.nw_proto) {
-        if (f->dl_type == htons(ETH_TYPE_ARP) ||
-            f->dl_type == htons(ETH_TYPE_RARP)) {
+        if (dl_type == htons(ETH_TYPE_ARP) ||
+            dl_type == htons(ETH_TYPE_RARP)) {
             ds_put_format(s, "%sarp_op=%s%"PRIu8",",
                           colors.param, colors.end, f->nw_proto);
         } else {
@@ -1424,8 +1416,8 @@ match_format(const struct match *match,
                           colors.param, colors.end, f->nw_proto);
         }
     }
-    if (f->dl_type == htons(ETH_TYPE_ARP) ||
-        f->dl_type == htons(ETH_TYPE_RARP)) {
+    if (dl_type == htons(ETH_TYPE_ARP) ||
+        dl_type == htons(ETH_TYPE_RARP)) {
         format_eth_masked(s, "arp_sha", f->arp_sha, wc->masks.arp_sha);
         format_eth_masked(s, "arp_tha", f->arp_tha, wc->masks.arp_tha);
     }
@@ -1478,15 +1470,15 @@ match_format(const struct match *match,
                       f->nw_frag & FLOW_NW_FRAG_LATER ? "later" : "not_later");
         break;
     }
-    if (f->dl_type == htons(ETH_TYPE_IP) &&
+    if (dl_type == htons(ETH_TYPE_IP) &&
         f->nw_proto == IPPROTO_ICMP) {
         format_be16_masked(s, "icmp_type", f->tp_src, wc->masks.tp_src);
         format_be16_masked(s, "icmp_code", f->tp_dst, wc->masks.tp_dst);
-    } else if (f->dl_type == htons(ETH_TYPE_IP) &&
+    } else if (dl_type == htons(ETH_TYPE_IP) &&
                f->nw_proto == IPPROTO_IGMP) {
         format_be16_masked(s, "igmp_type", f->tp_src, wc->masks.tp_src);
         format_be16_masked(s, "igmp_code", f->tp_dst, wc->masks.tp_dst);
-    } else if (f->dl_type == htons(ETH_TYPE_IPV6) &&
+    } else if (dl_type == htons(ETH_TYPE_IPV6) &&
                f->nw_proto == IPPROTO_ICMPV6) {
         format_be16_masked(s, "icmp_type", f->tp_src, wc->masks.tp_src);
         format_be16_masked(s, "icmp_code", f->tp_dst, wc->masks.tp_dst);

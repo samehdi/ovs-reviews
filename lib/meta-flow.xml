@@ -22,26 +22,37 @@
   </p>
 
   <p>
-    Some data fields, called <dfn>root fields</dfn>, are always present as a
-    consequence of the basic networking technology in use.  The Ethernet header
-    fields are root fields in current versions of Open vSwitch, though future
-    versions might support other roots.  (Currently, to support LISP tunnels,
-    which do not encapsulate an Ethernet header, Open vSwitch synthesizes one.)
+    Data fields that are always present as a consequence of the basic
+    networking technology in use are called called <dfn>root fields</dfn>.
+    In earlier versions of Open vSwitch, the Ethernet header was always
+    present and, as a consequence, the Ethernet header fields were root fields.
+    This remains the default mode of operation of Open vSwitch.  When packets
+    are received from a "layer3" Tunnel which does not encapsulate an Ethernet
+    header (such as LISP or GRE), Open vSwitch synthesizes one.
   </p>
 
-  <!-- future directions: EXT-112 -->
   <p>
-    Other data fields are not always present.  A packet contains ARP fields,
-    for example, only when its Ethernet header indicates the Ethertype for ARP,
+    The present version of Open vSwitch supports the concept of packet type-
+    aware pipeline introduced in OpenFlow 1.5.  A bridge configured as packet
+    type-aware can handle packets of multiple networking technologies, such as
+    Ethernet, IP, ARP, MPLS, or NSH in parallel.
+    The new packet type data metadata field <cite>packet_type</cite> becomes
+    the single root field and determines the applicability of all data fields.
+  </p>
+
+  <p>
+    Non-root data fields are not always present.  A packet contains ARP
+    fields, for example, only when its packet type is ARP or when it is an
+    Ethernet packet whose Ethernet header indicates the Ethertype for ARP,
     0x0806.  In this documentation, we say that a field is
     <dfn>applicable</dfn> when it is present in a packet, and
     <dfn>inapplicable</dfn> when it is not.  (These are not standard terms.)
     We refer to the conditions that determine whether a field is applicable as
     <dfn>prerequisites</dfn>.  Some VLAN-related fields are a special case:
-    these fields are always applicable, but have a designated value or bit that
-    indicates whether a VLAN header is present, with the remaining values or
-    bits indicating the VLAN header's content (if it is present).  <!-- XXX
-    also ethertype -->
+    these fields are always applicable for Ethernet packets, but have a
+    designated value or bit that indicates whether a VLAN header is present,
+    with the remaining values or bits indicating the VLAN header's content
+    (if it is present).  <!-- XXX also ethertype -->
   </p>
 
   <p>
@@ -51,7 +62,8 @@
     example, one may match (see <cite>Matching</cite>, below) a given
     field only if the match includes the field's prerequisite,
     e.g. matching an ARP field is only allowed if one also matches on
-    Ethertype 0x0806.
+    Ethertype 0x0806 or the packet_type for ARP in a packet type-aware
+    bridge.
   </p>
 
   <p>
@@ -316,6 +328,15 @@ tcp,tp_src=0x07c0/0xfff0
     <dt><code>mpls</code></dt>   <dd><code>eth_type=0x8847</code></dd>
     <dt><code>mplsm</code></dt>  <dd><code>eth_type=0x8848</code></dd>
   </dl>
+
+  <p>
+    These shorthand notations continue to work in packet type-aware bridges.
+    The absence of a packet_type match implies packet_type=ethernet, so that
+    shorthands match on Ethernet packets with the implied eth_type. Please
+    note that the shorthand <code>ip</code> does not match packets of packet_type
+    (1,0x800) for IPv4.
+  </p>
+
 
   <h2>Evolution of OpenFlow Fields</h2>
 
@@ -802,18 +823,10 @@ tcp,tp_src=0x07c0/0xfff0
   </p>
 
   <ul>
+    <li>Packet type.</li>
     <li>TCP flags.</li>
     <li>Packet registers.</li>
     <li>The output port in the OpenFlow action set.</li>
-  </ul>
-
-  <p>
-    OpenFlow 1.5 also added OXMs for the following fields not documented here
-    and not yet implemented by Open vSwitch:
-  </p>
-
-  <ul>
-    <li>Packet type.</li>
   </ul>
 
   <h1>Fields Reference</h1>
@@ -2273,6 +2286,55 @@ actions=clone(load:0->NXM_OF_IN_PORT[],output:123)
 
     <field id="MFF_DP_HASH" title="Datapath Hash" internal="yes"/>
     <field id="MFF_RECIRC_ID" title="Datapath Recirculation ID" internal="yes"/>
+
+    <field id="MFF_PACKET_TYPE" title="Packet Type">
+      <p>
+        Holds the current type of the packet in the format specified in
+        OpenFlow 1.5. The 32-bit value consists of the name space <code>NS</code>
+        in the upper 16 bits and a type <code>NS_TYPE</code> (within that name
+        space) in the lower 16 bits.  For ease of use the packet type field is
+        specified and displayed in the <code>(NS,NS_TYPE)</code> syntax.
+      </p>
+
+      <p>
+        Open vSwitch currently supports the following classes of packet types
+        for matching:
+        <dl>
+          <dt><code>(0,0)</code></dt>
+            <dd>(NS=ONF and NS_TYPE=Ethernet)</dd>
+          <dt><code>(1,xxxx)</code></dt>
+            <dd>(NS=Ethertype and xxxx=Ethertype value)</dd>
+        </dl>
+      </p>
+
+      <p>
+        Even though Open vSwitch can forward packets with any NS_TYPE value
+        for NS=Ethertype, it can only match on and process data fields for
+        the following list of supported packet types:
+        <dl>
+          <dt><code>(1,0x800)</code></dt>  <dd>IPv4</dd>
+          <dt><code>(1,0x806)</code></dt>  <dd>ARP</dd>
+          <dt><code>(1,0x86dd)</code></dt> <dd>IPv6</dd>
+          <dt><code>(1,0x8847)</code></dt> <dd>MPLS</dd>
+          <dt><code>(1,0x8848)</code></dt> <dd>MPLS multicast</dd>
+          <dt><code>(1,0x8035)</code></dt> <dd>RARP</dd>
+          <dt><code>(1,0x894f)</code></dt> <dd>NSH</dd>
+        </dl>
+      </p>
+
+      <p>
+        The packet type field is mandatory if the OVS bridge is configured
+        to be packet type-aware. In that case the packet type becomes a
+        pre-requisite for all matches. If it is omitted from the match,
+        it defaults to <code>(0,0)</code> (Ethernet) for backward
+        compatibility.
+      </p>
+
+      <p>
+        Open vSwitch allows any table to match this field.
+      </p>
+    </field>
+
   </group>
 
   <group title="Connection Tracking">

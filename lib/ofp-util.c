@@ -7680,21 +7680,37 @@ ofputil_normalize_match__(struct match *match, bool may_log)
         MAY_IPV6        = 1 << 6, /* ipv6_src, ipv6_dst, ipv6_label */
         MAY_ND_TARGET   = 1 << 7, /* nd_target */
         MAY_MPLS        = 1 << 8, /* mpls label and tc */
+        MAY_ETHER       = 1 << 9, /* dl_src, dl_dst */
     } may_match;
 
-    struct flow_wildcards wc;
+    struct flow_wildcards wc = match->wc;
+    ovs_be16 dl_type;
 
     /* Figure out what fields may be matched. */
-    if (match->flow.dl_type == htons(ETH_TYPE_IP)) {
-        may_match = MAY_NW_PROTO | MAY_IPVx | MAY_NW_ADDR;
+    /* Check the packet_type first and extract dl_type. */
+    if (wc.masks.packet_type == 0 ||
+        (wc.masks.packet_type == OVS_BE32_MAX &&
+         match->flow.packet_type == htonl(PT_ETH))) {
+        may_match = MAY_ETHER;
+        dl_type = match->flow.dl_type;
+    } else if (wc.masks.packet_type == OVS_BE32_MAX &&
+               pt_ns(match->flow.packet_type) == OFPHTN_ETHERTYPE) {
+        may_match = 0;
+        dl_type = pt_ns_type_be(match->flow.packet_type);
+    } else {
+        may_match = 0;
+        dl_type = 0;
+    }
+    if (dl_type == htons(ETH_TYPE_IP)) {
+        may_match |= MAY_NW_PROTO | MAY_IPVx | MAY_NW_ADDR;
         if (match->flow.nw_proto == IPPROTO_TCP ||
             match->flow.nw_proto == IPPROTO_UDP ||
             match->flow.nw_proto == IPPROTO_SCTP ||
             match->flow.nw_proto == IPPROTO_ICMP) {
             may_match |= MAY_TP_ADDR;
         }
-    } else if (match->flow.dl_type == htons(ETH_TYPE_IPV6)) {
-        may_match = MAY_NW_PROTO | MAY_IPVx | MAY_IPV6;
+    } else if (dl_type == htons(ETH_TYPE_IPV6)) {
+        may_match |= MAY_NW_PROTO | MAY_IPVx | MAY_IPV6;
         if (match->flow.nw_proto == IPPROTO_TCP ||
             match->flow.nw_proto == IPPROTO_UDP ||
             match->flow.nw_proto == IPPROTO_SCTP) {
@@ -7707,17 +7723,17 @@ ofputil_normalize_match__(struct match *match, bool may_log)
                 may_match |= MAY_ND_TARGET | MAY_ARP_THA;
             }
         }
-    } else if (match->flow.dl_type == htons(ETH_TYPE_ARP) ||
-               match->flow.dl_type == htons(ETH_TYPE_RARP)) {
-        may_match = MAY_NW_PROTO | MAY_NW_ADDR | MAY_ARP_SHA | MAY_ARP_THA;
-    } else if (eth_type_mpls(match->flow.dl_type)) {
-        may_match = MAY_MPLS;
-    } else {
-        may_match = 0;
+    } else if (dl_type == htons(ETH_TYPE_ARP) ||
+               dl_type == htons(ETH_TYPE_RARP)) {
+        may_match |= MAY_NW_PROTO | MAY_NW_ADDR | MAY_ARP_SHA | MAY_ARP_THA;
+    } else if (eth_type_mpls(dl_type)) {
+        may_match |= MAY_MPLS;
     }
 
     /* Clear the fields that may not be matched. */
-    wc = match->wc;
+    if (!(may_match & MAY_ETHER)) {
+        wc.masks.dl_src = wc.masks.dl_dst = eth_addr_zero;
+    }
     if (!(may_match & MAY_NW_ADDR)) {
         wc.masks.nw_src = wc.masks.nw_dst = htonl(0);
     }

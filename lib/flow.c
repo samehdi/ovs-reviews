@@ -1153,6 +1153,24 @@ format_flags_masked(struct ds *ds, const char *name,
     }
 }
 
+void
+format_packet_type_masked(struct ds *s, const ovs_be32 value, const ovs_be32 mask)
+{
+    if (pt_ns_type_be(mask) == 0) {
+        ds_put_format(s, "packet_type=(%u,*),",
+                      pt_ns(value));
+    } else if (pt_ns_type_be(mask) == OVS_BE16_MAX) {
+        ds_put_format(s, "packet_type=(%u,%#"PRIx16"),",
+                      pt_ns(value),
+                      pt_ns_type(value));
+    } else{
+        ds_put_format(s, "packet_type=(%u,%#"PRIx16"/%#"PRIx16"),",
+                      pt_ns(value),
+                      pt_ns_type(value),
+                      pt_ns_type(mask));
+    }
+}
+
 /* Scans a string 's' of flags to determine their numerical value and
  * returns the number of characters parsed using 'bit_to_string' to
  * lookup flag names. Scanning continues until the character 'end' is
