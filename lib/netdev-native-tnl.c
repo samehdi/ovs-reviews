@@ -463,10 +463,12 @@ netdev_gre_build_header(const struct netdev *netdev,
 
     greh = netdev_tnl_ip_build_header(data, params, IPPROTO_GRE);
 
-    if (tnl_cfg->is_layer3) {
-        greh->protocol = params->flow->dl_type;
-    } else {
+    if (params->flow->packet_type == htonl(PT_ETH)) {
         greh->protocol = htons(ETH_TYPE_TEB);
+    } else if (pt_ns(params->flow->packet_type) == OFPHTN_ETHERTYPE) {
+        greh->protocol = pt_ns_type_be(params->flow->packet_type);
+    } else {
+        return 1;
     }
     greh->flags = 0;
 
@@ -575,8 +577,10 @@ netdev_vxlan_build_header(const struct netdev *netdev,
         put_16aligned_be32(&vxh->vx_flags, htonl(VXLAN_FLAGS | VXLAN_HF_GPE));
         put_16aligned_be32(&vxh->vx_vni,
                            htonl(ntohll(params->flow->tunnel.tun_id) << 8));
-        if (tnl_cfg->is_layer3) {
-            switch (ntohs(params->flow->dl_type)) {
+        if (params->flow->packet_type == htonl(PT_ETH)) {
+            vxh->vx_gpe.next_protocol = VXLAN_GPE_NP_ETHERNET;
+        } else if (pt_ns(params->flow->packet_type) == OFPHTN_ETHERTYPE){
+            switch (pt_ns_type(params->flow->packet_type)) {
             case ETH_TYPE_IP:
                 vxh->vx_gpe.next_protocol = VXLAN_GPE_NP_IPV4;
                 break;
@@ -586,9 +590,13 @@ netdev_vxlan_build_header(const struct netdev *netdev,
             case ETH_TYPE_TEB:
                 vxh->vx_gpe.next_protocol = VXLAN_GPE_NP_ETHERNET;
                 break;
+            default:
+                /* Drop packet. */
+                return 1;
+                break;
             }
         } else {
-            vxh->vx_gpe.next_protocol = VXLAN_GPE_NP_ETHERNET;
+            return 1;
         }
     } else {
         put_16aligned_be32(&vxh->vx_flags, htonl(VXLAN_FLAGS));

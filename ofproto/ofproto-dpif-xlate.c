@@ -6153,7 +6153,7 @@ xlate_wc_init(struct xlate_ctx *ctx)
         netflow_mask_wc(&ctx->xin->flow, ctx->wc);
     }
 
-    tnl_wc_init(&ctx->xin->flow, ctx->wc);
+    tnl_wc_init(&ctx->xin->flow, ctx->wc, ctx->xbridge->packet_type_aware);
 }
 
 static void
