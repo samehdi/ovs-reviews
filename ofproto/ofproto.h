@@ -325,6 +325,7 @@ void ofproto_set_threads(int n_handlers, int n_revalidators);
 void ofproto_type_set_config(const char *type,
                              const struct smap *other_config);
 void ofproto_set_dp_desc(struct ofproto *, const char *dp_desc);
+void ofproto_set_packet_type_aware(struct ofproto *p, bool pta);
 int ofproto_set_snoops(struct ofproto *, const struct sset *snoops);
 int ofproto_set_netflow(struct ofproto *,
                         const struct netflow_options *nf_options);

@@ -855,6 +855,15 @@
         ID, the default queue is used instead.
       </column>
 
+      <column name="other_config" key="packet-type-aware"
+              type='{"type": "boolean"}'>
+        If set to <code>true</code>, the bridge supports the packet type awareness
+        feature introduced in OpenFlow version 1.5. The bridge can switch Ethernet
+        and non-Ethernet packets and a controller must consider the type and match
+        on the packet_type match field as appropriate. OVS does support the packet-
+        type-aware property from OpenFlow version 1.3.
+      </column>
+
       <column name="protocols">
         <p>
           List of OpenFlow protocols that may be used when negotiating

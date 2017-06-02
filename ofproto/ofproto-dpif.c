@@ -446,6 +446,7 @@ type_run(const char *type)
                               ofproto->netflow,
                               ofproto->up.forward_bpdu,
                               connmgr_has_in_band(ofproto->up.connmgr),
+                              ofproto->up.packet_type_aware,
                               &ofproto->backer->support);
 
             HMAP_FOR_EACH (bundle, hmap_node, &ofproto->bundles) {

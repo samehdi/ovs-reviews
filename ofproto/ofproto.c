@@ -784,6 +784,12 @@ ofproto_set_dp_desc(struct ofproto *p, const char *dp_desc)
     p->dp_desc = nullable_xstrdup(dp_desc);
 }
 
+void
+ofproto_set_packet_type_aware(struct ofproto *p, bool pta)
+{
+    p->packet_type_aware = pta;
+}
+
 int
 ofproto_set_snoops(struct ofproto *ofproto, const struct sset *snoops)
 {
@@ -3208,8 +3214,8 @@ query_tables(struct ofproto *ofproto,
              struct ofputil_table_stats **statsp)
 {
     struct mf_bitmap rw_fields = oxm_writable_fields();
-    struct mf_bitmap match = oxm_matchable_fields();
-    struct mf_bitmap mask = oxm_maskable_fields();
+    struct mf_bitmap match = oxm_matchable_fields(ofproto->packet_type_aware);
+    struct mf_bitmap mask = oxm_maskable_fields(ofproto->packet_type_aware);
 
     struct ofputil_table_features *features;
     struct ofputil_table_stats *stats;
@@ -4710,6 +4716,7 @@ add_flow_init(struct ofproto *ofproto, struct ofproto_flow_mod *ofm,
     OVS_EXCLUDED(ofproto_mutex)
 {
     struct oftable *table;
+    struct match match = fm->match;
     struct cls_rule cr;
     uint8_t table_id;
     enum ofperr error;
@@ -4750,8 +4757,21 @@ add_flow_init(struct ofproto *ofproto, struct ofproto_flow_mod *ofm,
         return OFPERR_OFPBRC_EPERM;
     }
 
+    if (ofproto->packet_type_aware) {
+        if (!match.wc.masks.packet_type) {
+            /* Add default match on packet_type Ethernet.*/
+            match.flow.packet_type = htonl(PT_ETH);
+            match.wc.masks.packet_type = OVS_BE32_MAX;
+        }
+    } else {
+        if (match.wc.masks.packet_type) {
+            /* Match on packet_type not allowed. */
+            return OFPERR_OFPBMC_BAD_TYPE;
+        }
+    }
+
     if (!ofm->temp_rule) {
-        cls_rule_init(&cr, &fm->match, fm->priority);
+        cls_rule_init(&cr, &match, fm->priority);
 
         /* Allocate new rule.  Destroys 'cr'. */
         error = ofproto_rule_create(ofproto, &cr, table - ofproto->tables,

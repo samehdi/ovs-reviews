@@ -2083,12 +2083,15 @@ oxm_writable_fields(void)
 /* Returns a bitmap of fields that can be encoded in OXM and that can be
  * matched in a flow table.  */
 struct mf_bitmap
-oxm_matchable_fields(void)
+oxm_matchable_fields(bool packet_type_aware)
 {
     struct mf_bitmap b = MF_BITMAP_INITIALIZER;
     int i;
 
     for (i = 0; i < MFF_N_IDS; i++) {
+        if (i == MFF_PACKET_TYPE && !packet_type_aware) {
+            continue;
+        }
         if (mf_oxm_header(i, 0)) {
             bitmap_set1(b.bm, i);
         }
@@ -2099,12 +2102,15 @@ oxm_matchable_fields(void)
 /* Returns a bitmap of fields that can be encoded in OXM and that can be
  * matched in a flow table with an arbitrary bitmask.  */
 struct mf_bitmap
-oxm_maskable_fields(void)
+oxm_maskable_fields(bool packet_type_aware)
 {
     struct mf_bitmap b = MF_BITMAP_INITIALIZER;
     int i;
 
     for (i = 0; i < MFF_N_IDS; i++) {
+        if (i == MFF_PACKET_TYPE && !packet_type_aware) {
+            continue;
+        }
         if (mf_oxm_header(i, 0) && mf_from_id(i)->maskable == MFM_FULLY) {
             bitmap_set1(b.bm, i);
         }

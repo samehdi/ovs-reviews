@@ -166,6 +166,7 @@ void xlate_ofproto_set(struct ofproto_dpif *, const char *name, struct dpif *,
                        const struct mbridge *, const struct dpif_sflow *,
                        const struct dpif_ipfix *, const struct netflow *,
                        bool forward_bpdu, bool has_in_band,
+                       bool packet_type_aware,
                        const struct dpif_backer_support *support);
 void xlate_remove_ofproto(struct ofproto_dpif *);
 

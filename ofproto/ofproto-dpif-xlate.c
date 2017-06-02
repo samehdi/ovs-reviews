@@ -108,6 +108,7 @@ struct xbridge {
 
     bool has_in_band;             /* Bridge has in band control? */
     bool forward_bpdu;            /* Bridge forwards STP BPDUs? */
+    bool packet_type_aware;       /* Bridge is packet-type-aware? */
 
     /* Datapath feature support. */
     struct dpif_backer_support support;
@@ -555,6 +556,7 @@ static void xlate_xbridge_set(struct xbridge *, struct dpif *,
                               const struct dpif_ipfix *,
                               const struct netflow *,
                               bool forward_bpdu, bool has_in_band,
+                              bool packet_type_aware,
                               const struct dpif_backer_support *);
 static void xlate_xbundle_set(struct xbundle *xbundle,
                               enum port_vlan_mode vlan_mode,
@@ -815,6 +817,7 @@ xlate_xbridge_set(struct xbridge *xbridge,
                   const struct dpif_ipfix *ipfix,
                   const struct netflow *netflow,
                   bool forward_bpdu, bool has_in_band,
+                  bool packet_type_aware,
                   const struct dpif_backer_support *support)
 {
     if (xbridge->ml != ml) {
@@ -860,6 +863,7 @@ xlate_xbridge_set(struct xbridge *xbridge,
     xbridge->dpif = dpif;
     xbridge->forward_bpdu = forward_bpdu;
     xbridge->has_in_band = has_in_band;
+    xbridge->packet_type_aware = packet_type_aware;
     xbridge->support = *support;
 }
 
@@ -950,7 +954,7 @@ xlate_xbridge_copy(struct xbridge *xbridge)
                       xbridge->rstp, xbridge->ms, xbridge->mbridge,
                       xbridge->sflow, xbridge->ipfix, xbridge->netflow,
                       xbridge->forward_bpdu, xbridge->has_in_band,
-                      &xbridge->support);
+                      xbridge->packet_type_aware, &xbridge->support);
     LIST_FOR_EACH (xbundle, list_node, &xbridge->xbundles) {
         xlate_xbundle_copy(new_xbridge, xbundle);
     }
@@ -1102,6 +1106,7 @@ xlate_ofproto_set(struct ofproto_dpif *ofproto, const char *name,
                   const struct dpif_ipfix *ipfix,
                   const struct netflow *netflow,
                   bool forward_bpdu, bool has_in_band,
+                  bool packet_type_aware,
                   const struct dpif_backer_support *support)
 {
     struct xbridge *xbridge;
@@ -1120,7 +1125,7 @@ xlate_ofproto_set(struct ofproto_dpif *ofproto, const char *name,
     xbridge->name = xstrdup(name);
 
     xlate_xbridge_set(xbridge, dpif, ml, stp, rstp, ms, mbridge, sflow, ipfix,
-                      netflow, forward_bpdu, has_in_band, support);
+                      netflow, forward_bpdu, has_in_band, packet_type_aware, support);
 }
 
 static void
@@ -3351,17 +3356,6 @@ compose_output_action__(struct xlate_ctx *ctx, ofp_port_t ofp_port,
         return;
     }
 
-    if (flow->packet_type == htonl(PT_ETH) && xport->is_layer3) {
-        /* Ethernet packet to L3 outport -> pop ethernet header. */
-        flow->packet_type = PACKET_TYPE_BE(OFPHTN_ETHERTYPE,
-                                           ntohs(flow->dl_type));
-    } else if (flow->packet_type != htonl(PT_ETH) && !xport->is_layer3) {
-        /* L2 outport and non-ethernet packet_type -> add dummy eth header. */
-        flow->packet_type = htonl(PT_ETH);
-        flow->dl_dst = eth_addr_zero;
-        flow->dl_src = eth_addr_zero;
-    }
-
     if (xport->peer) {
         const struct xport *peer = xport->peer;
         struct flow old_flow = ctx->xin->flow;
@@ -3501,6 +3495,22 @@ compose_output_action__(struct xlate_ctx *ctx, ofp_port_t ofp_port,
 
     memcpy(flow_vlans, flow->vlans, sizeof flow_vlans);
     flow_nw_tos = flow->nw_tos;
+
+    /* In a bridge that is not packet type-aware convert the packet to what
+     * the output port expects. */
+    if (!ctx->xbridge->packet_type_aware) {
+        if (flow->packet_type == htonl(PT_ETH) && xport->is_layer3 ) {
+            /* Ethernet packet to L3 outport -> pop ethernet header. */
+            flow->packet_type = PACKET_TYPE_BE(OFPHTN_ETHERTYPE,
+                                               ntohs(flow->dl_type));
+        }
+        else if (flow->packet_type != htonl(PT_ETH) && !xport->is_layer3) {
+            /* L2 outport and non-ethernet packet_type -> add dummy eth header. */
+            flow->packet_type = htonl(PT_ETH);
+            flow->dl_dst = eth_addr_zero;
+            flow->dl_src = eth_addr_zero;
+        }
+    }
 
     if (count_skb_priorities(xport)) {
         memset(&wc->masks.skb_priority, 0xff, sizeof wc->masks.skb_priority);

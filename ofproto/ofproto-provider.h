@@ -85,6 +85,7 @@ struct ofproto {
     char *serial_desc;          /* Serial number (NULL for default). */
     char *dp_desc;              /* Datapath description (NULL for default). */
     enum ofputil_frag_handling frag_handling;
+    bool packet_type_aware;     /* Supports packet-type aware pipeline */
 
     /* Datapath. */
     struct hmap ports;          /* Contains "struct ofport"s. */
