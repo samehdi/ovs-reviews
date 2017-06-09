@@ -255,7 +255,7 @@ enum OVS_PACKED_ENUM mf_field_id {
 
     /* "packet_type".
      *
-     * Define the packet type in OpenFlow 1.3+.
+     * Define the packet type in OpenFlow 1.5+.
      *
      * Type: be32.
      * Maskable: no.
@@ -263,7 +263,7 @@ enum OVS_PACKED_ENUM mf_field_id {
      * Prerequisites: none.
      * Access: read-only.
      * NXM: none.
-     * OXM: OXM_OF_PACKET_TYPE(44) since OF1.3 and v2.8.
+     * OXM: OXM_OF_PACKET_TYPE(44) since OF1.5 and v2.8.
      */
     MFF_PACKET_TYPE,
 

@@ -83,8 +83,7 @@ void format_flags(struct ds *ds, const char *(*bit_to_string)(uint32_t),
 void format_flags_masked(struct ds *ds, const char *name,
                          const char *(*bit_to_string)(uint32_t),
                          uint32_t flags, uint32_t mask, uint32_t max_mask);
-void format_packet_type_masked(struct ds *s, const ovs_be32 value,
-                               const ovs_be32 mask);
+void format_packet_type_masked(struct ds *, ovs_be32 value, ovs_be32 mask);
 int parse_flags(const char *s, const char *(*bit_to_string)(uint32_t),
                 char end, const char *field_name, char **res_string,
                 uint32_t *res_flags, uint32_t allowed, uint32_t *res_mask);

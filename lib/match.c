@@ -1280,6 +1280,7 @@ match_format(const struct match *match,
 
     if (wc->masks.packet_type && !match_has_default_packet_type(match)) {
         format_packet_type_masked(s, f->packet_type, wc->masks.packet_type);
+        ds_put_char(s, ',');
         if (pt_ns(f->packet_type) == OFPHTN_ETHERTYPE) {
             dl_type = pt_ns_type_be(f->packet_type);
         }
