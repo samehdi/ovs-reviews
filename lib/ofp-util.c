@@ -160,6 +160,7 @@ ofputil_match_from_ofp10_match(const struct ofp10_match *ofmatch,
     memset(&match->flow, 0, sizeof match->flow);
     ofputil_wildcard_from_ofpfw10(ofpfw, &match->wc);
     memset(&match->tun_md, 0, sizeof match->tun_md);
+    match_set_default_packet_type(match);
 
     /* Initialize most of match->flow. */
     match->flow.nw_src = ofmatch->nw_src;
@@ -328,6 +329,8 @@ ofputil_match_from_ofp11_match(const struct ofp11_match *ofmatch,
     bool ipv4, arp, rarp;
 
     match_init_catchall(match);
+    match->flow.tunnel.metadata.tab = NULL;
+    match_set_default_packet_type(match);
 
     if (!(wc & OFPFW11_IN_PORT)) {
         ofp_port_t ofp_port;
@@ -7688,9 +7691,7 @@ ofputil_normalize_match__(struct match *match, bool may_log)
 
     /* Figure out what fields may be matched. */
     /* Check the packet_type first and extract dl_type. */
-    if (wc.masks.packet_type == 0 ||
-        (wc.masks.packet_type == OVS_BE32_MAX &&
-         match->flow.packet_type == htonl(PT_ETH))) {
+    if (wc.masks.packet_type == 0 || match_has_default_packet_type(match)) {
         may_match = MAY_ETHER;
         dl_type = match->flow.dl_type;
     } else if (wc.masks.packet_type == OVS_BE32_MAX &&

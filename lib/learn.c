@@ -169,6 +169,7 @@ learn_execute(const struct ofpact_learn *learn, const struct flow *flow,
             break;
         }
     }
+    match_set_default_packet_type(&fm->match);
 
     fm->ofpacts = ofpacts->data;
     fm->ofpacts_len = ofpacts->size;

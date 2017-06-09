@@ -571,6 +571,7 @@ nx_pull_raw(const uint8_t *p, unsigned int match_len, bool strict,
         }
     }
 
+    match_set_default_packet_type(match);
     match->flow.tunnel.metadata.tab = NULL;
     return 0;
 }
@@ -1003,7 +1004,7 @@ nx_put_raw(struct ofpbuf *b, enum ofp_version oxm, const struct match *match,
     BUILD_ASSERT_DECL(FLOW_WC_SEQ == 39);
 
     /* OpenFlow Packet Type. Must be first. */
-    if (match->wc.masks.packet_type) {
+    if (match->wc.masks.packet_type && !match_has_default_packet_type(match)) {
         nxm_put_32m(b, MFF_PACKET_TYPE, oxm, flow->packet_type,
                     match->wc.masks.packet_type);
     }
@@ -2083,15 +2084,12 @@ oxm_writable_fields(void)
 /* Returns a bitmap of fields that can be encoded in OXM and that can be
  * matched in a flow table.  */
 struct mf_bitmap
-oxm_matchable_fields(bool packet_type_aware)
+oxm_matchable_fields(void)
 {
     struct mf_bitmap b = MF_BITMAP_INITIALIZER;
     int i;
 
     for (i = 0; i < MFF_N_IDS; i++) {
-        if (i == MFF_PACKET_TYPE && !packet_type_aware) {
-            continue;
-        }
         if (mf_oxm_header(i, 0)) {
             bitmap_set1(b.bm, i);
         }
@@ -2102,15 +2100,12 @@ oxm_matchable_fields(bool packet_type_aware)
 /* Returns a bitmap of fields that can be encoded in OXM and that can be
  * matched in a flow table with an arbitrary bitmask.  */
 struct mf_bitmap
-oxm_maskable_fields(bool packet_type_aware)
+oxm_maskable_fields(void)
 {
     struct mf_bitmap b = MF_BITMAP_INITIALIZER;
     int i;
 
     for (i = 0; i < MFF_N_IDS; i++) {
-        if (i == MFF_PACKET_TYPE && !packet_type_aware) {
-            continue;
-        }
         if (mf_oxm_header(i, 0) && mf_from_id(i)->maskable == MFM_FULLY) {
             bitmap_set1(b.bm, i);
         }

@@ -149,8 +149,8 @@ ovs_be64 oxm_bitmap_from_mf_bitmap(const struct mf_bitmap *, enum ofp_version);
 struct mf_bitmap oxm_bitmap_to_mf_bitmap(ovs_be64 oxm_bitmap,
                                          enum ofp_version);
 struct mf_bitmap oxm_writable_fields(void);
-struct mf_bitmap oxm_matchable_fields(bool packet_type_aware);
-struct mf_bitmap oxm_maskable_fields(bool packet_type_aware);
+struct mf_bitmap oxm_matchable_fields(void);
+struct mf_bitmap oxm_maskable_fields(void);
 
 /* Dealing with the 'ofs_nbits' members in several Nicira extensions. */
 

@@ -519,6 +519,7 @@ parse_ofp_str__(struct ofputil_flow_mod *fm, int command, char *string,
             return error;
         }
     }
+    match_set_default_packet_type(&fm->match);
     /* Copy ethertype to flow->dl_type for matches on packet_type
      * (OFPHTN_ETHERTYPE, ethertype). */
     if (fm->match.wc.masks.packet_type == OVS_BE32_MAX &&

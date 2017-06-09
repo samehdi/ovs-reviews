@@ -3806,8 +3806,9 @@ bridge_configure_dp_desc(struct bridge *br)
 static void
 bridge_configure_packet_type_aware(struct bridge *br)
 {
-    ofproto_set_packet_type_aware(br->ofproto,
-            smap_get_bool(&br->cfg->other_config, "packet-type-aware", false));
+    bool legacy_l3_pipeline = smap_get_bool(&br->cfg->other_config,
+                                   "legacy-l3-pipeline", true);
+    ofproto_set_packet_type_aware(br->ofproto, !legacy_l3_pipeline);
 }
 
 static struct aa_mapping *

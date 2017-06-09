@@ -31,12 +31,14 @@ strip_xout_keep_actions () {
 }
 
 filter_flow_install () {
-    grep 'flow_add' | sed 's/.*flow_add: //' | sort | uniq
+    grep 'flow_add' | sed 's/.*flow_add: //
+s/packet_type(ns=0,id=0),//' | sort | uniq
 }
 
 filter_flow_dump () {
     grep 'flow_dump ' | sed '
 	s/.*flow_dump //
+	s/packet_type(ns=0,id=0),//
 	s/used:[0-9]*\.[0-9]*/used:0.0/
     ' | sort | uniq
 }

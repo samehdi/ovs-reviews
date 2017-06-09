@@ -855,12 +855,21 @@
         ID, the default queue is used instead.
       </column>
 
-      <column name="other_config" key="packet-type-aware"
+      <column name="other_config" key="legacy-l3-tunnel"
               type='{"type": "boolean"}'>
-        If set to <code>true</code>, the bridge supports the packet type
-        awareness feature introduced in OpenFlow version 1.5. The bridge can
-        switch Ethernet and non-Ethernet packets and a controller must consider
-        the type and match on the packet_type match field as appropriate.
+        <p>
+          If set to <code>true</code>, the Open vSwitch pipeline implements
+          legacy behavior that treats packets received on L3 tunnels as
+          Ethernet packets, by synthesizing an Ethernet header whose Ethertype
+          is the packet's type and all-zero source and destination.  If set to
+          <code>false</code>, the pipeline handles L3 tunnel packets using the
+          OpenFlow 1.5+ <code>packet_type</code> field.
+        </p>
+
+        <p>
+          The default is currently <code>true</code>, but later versions of
+          Open vSwitch may default to <code>false</code>.
+        </p>
       </column>
 
       <column name="protocols">
