@@ -674,7 +674,7 @@ parse_ofp_packet_out_str__(struct ofputil_packet_out *po, char *string,
                 ovs_be32 packet_type;
                 *ns_type = '\0';
                 packet_type = PACKET_TYPE_BE(strtoul(ns, NULL, 0),
-                                             strtoul(++ns_type,NULL, 0));
+                                             strtoul(++ns_type, NULL, 0));
                 match_set_packet_type(&po->flow_metadata, packet_type);
             } else {
                 error = xasprintf("%s(%s) can't be interpreted", name, value);
