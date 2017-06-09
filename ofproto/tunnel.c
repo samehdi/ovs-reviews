@@ -361,8 +361,7 @@ tnl_process_ecn(struct flow *flow)
 }
 
 void
-tnl_wc_init(struct flow *flow, struct flow_wildcards *wc,
-            bool packet_type_aware)
+tnl_wc_init(struct flow *flow, struct flow_wildcards *wc)
 {
     if (tnl_port_should_receive(flow)) {
         wc->masks.tunnel.tun_id = OVS_BE64_MAX;
@@ -387,10 +386,8 @@ tnl_wc_init(struct flow *flow, struct flow_wildcards *wc,
             && IP_ECN_is_ce(flow->tunnel.ip_tos)) {
             wc->masks.nw_tos |= IP_ECN_MASK;
         }
-        if (!packet_type_aware) {
-            /* Match on packet_type for tunneled packets.*/
-            wc->masks.packet_type = OVS_BE32_MAX;
-        }
+        /* Match on packet_type for tunneled packets.*/
+        wc->masks.packet_type = OVS_BE32_MAX;
     }
 }
 
@@ -570,19 +567,17 @@ tnl_find(const struct flow *flow) OVS_REQ_RDLOCK(rwlock)
                     match.ip_dst_flow = ip_dst_flow;
                     match.ip_src_flow = ip_src == IP_SRC_FLOW;
 
-                    /* If it's about a Non-ethernet packet then we look for a
-                     * layer3 tunnel port first, as it would be attached to a
-                     * non-PTAP bridge. Then for a versatile tunnel port as it
-                     * would be attached to a PTAP bridge. */
+                    /* If it's about a non-Ethernet packet, look for a layer-3
+                     * tunnel port first. */
                     if (pt_ns(flow->packet_type) == OFPHTN_ETHERTYPE) {
-                        /* Try to find a layer3 port first. */
                         match.is_layer3 = true;
                         tnl_port = tnl_find_exact(&match, map);
                         if (tnl_port) {
                             return tnl_port;
                         }
                     }
-                    /* Check for a non-layer3 or versatile tunnel port. */
+
+                    /* Then check for a non-layer3 or versatile tunnel port. */
                     match.is_layer3 = false;
                     tnl_port = tnl_find_exact(&match, map);
                     if (tnl_port) {
