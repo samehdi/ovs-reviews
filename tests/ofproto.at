@@ -2141,7 +2141,7 @@ packet-out in_port=6, packet=0001020304050010203040501234 actions=table
 packet-out in_port=6, packet=0001020304050010203040501234 actions=group:2
 ])
 AT_CHECK([ovs-ofctl bundle br0 bundle.txt 2>&1 | sed '/talking to/,$d' | strip_xids], [], [dnl
-Error OFPBAC_BAD_OUT_GROUP for: OFPT_PACKET_OUT (OF1.4): packet_type=(0,0),in_port=6 actions=group:2 data_len=14
+Error OFPBAC_BAD_OUT_GROUP for: OFPT_PACKET_OUT (OF1.4): in_port=6 actions=group:2 data_len=14
 vlan_tci=0x0000,dl_src=00:10:20:30:40:50,dl_dst=00:01:02:03:04:05,dl_type=0x1234
 Error OFPBFC_MSG_FAILED for: OFPT_BUNDLE_CONTROL (OF1.4):
  bundle_id=0 type=COMMIT_REQUEST flags=atomic ordered
@@ -4220,29 +4220,6 @@ OFPT_BARRIER_REPLY (OF1.3):
 
 OVS_VSWITCHD_STOP
 AT_CLEANUP
-
-dnl This test checks that NON-PTAP bridge rejects 1.5 packet-out with packet_type PT_IPV4.
-AT_SETUP([ofproto - packet-out with set_field metadata with packet_type PT_IPV4 on NON-PTAP bridge (OpenFlow 1.5)])
-OVS_VSWITCHD_START
-
-AT_CHECK([
-    ovs-vsctl set bridge br0 other-config:packet-type-aware=false
-], [0])
-
-AT_CHECK([ovs-ofctl -O OpenFlow15 packet-out br0 "in_port=controller packet=4500002012344000ff1155670a0000140a00001e006400c8000cea78ffffffff packet_type(1,0x800) actions=set_field:0xfafafafa5a5a5a5a->metadata,controller"],
-[1], [], [dnl
-OFPT_ERROR (OF1.5) (xid=0x4): OFPBRC_BAD_PACKET
-OFPT_PACKET_OUT (OF1.5) (xid=0x4):
-(***truncated to 64 bytes from 104***)
-00000000  06 0d 00 68 00 00 00 04-ff ff ff ff 00 20 00 00 |...h......... ..|
-00000010  00 01 00 14 80 00 58 04-00 01 08 00 80 00 00 04 |......X.........|
-00000020  ff ff ff fd 00 00 00 00-00 19 00 10 80 00 04 08 |................|
-00000030  fa fa fa fa 5a 5a 5a 5a-00 00 00 10 ff ff ff fd |....ZZZZ........|
-])
-
-OVS_VSWITCHD_STOP
-AT_CLEANUP
-
 
 dnl This test checks that metadata is encoded in packet_in structures,
 dnl supported by NXAST.

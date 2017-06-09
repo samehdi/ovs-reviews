@@ -1,55 +1,8 @@
 AT_BANNER([packet-type-aware pipeline])
 
-AT_SETUP([ptap - create packet-type-aware bridge])
-
-OVS_VSWITCHD_START([])
-
-AT_CHECK([
-    ovs-vsctl set bridge br0 \
-    datapath_type=dummy \
-    other-config:packet-type-aware=true
-], [0])
-
-AT_CHECK([ovs-vsctl list bridge br0 | grep other_config], [0], [dnl
-other_config        : {datapath-id="fedcba9876543210", hwaddr="aa:55:aa:55:00:00", packet-type-aware="true"}
-])
-
-AT_CHECK([ovs-ofctl -Oopenflow13 dump-table-features br0 | grep packet_type], [0], [dnl
-      packet_type: exact match or wildcard
-])
-AT_CHECK([ovs-ofctl -Oopenflow14 dump-table-features br0 | grep packet_type], [0], [dnl
-      packet_type: exact match or wildcard
-])
-AT_CHECK([ovs-ofctl -Oopenflow15 dump-table-features br0 | grep packet_type], [0], [dnl
-      packet_type: exact match or wildcard
-])
-
-AT_CHECK([
-    ovs-vsctl set bridge br0 other-config:packet-type-aware=false
-], [0])
-
-AT_CHECK([ovs-vsctl list bridge br0 | grep other_config], [0], [dnl
-other_config        : {datapath-id="fedcba9876543210", hwaddr="aa:55:aa:55:00:00", packet-type-aware="false"}
-])
-
-AT_CHECK([ovs-ofctl -Oopenflow13 dump-table-features br0 | grep packet_type], [1])
-AT_CHECK([ovs-ofctl -Oopenflow14 dump-table-features br0 | grep packet_type], [1])
-AT_CHECK([ovs-ofctl -Oopenflow15 dump-table-features br0 | grep packet_type], [1])
-
-OVS_VSWITCHD_STOP
-AT_CLEANUP
-
-
 AT_SETUP([ptap - legal flow entries in ptap bridge])
 
-OVS_VSWITCHD_START([])
-
-AT_CHECK([
-    ovs-vsctl set bridge br0 \
-    datapath_type=dummy \
-    protocols=OpenFlow10,OpenFlow13,OpenFlow14,OpenFlow15 \
-    other-config:packet-type-aware=true
-], [0])
+OVS_VSWITCHD_START
 
 AT_CHECK([
     ovs-ofctl del-flows br0
@@ -64,11 +17,11 @@ AT_CHECK([
 ], [0])
 
 AT_CHECK([ovs-ofctl -Oopenflow15 dump-flows br0 | ofctl_strip | sort | grep actions], [0], [dnl
- priority=1,packet_type=(0,0),dl_src=11:22:33:44:55:66,dl_type=0x1234 actions=drop
- priority=1,packet_type=(0,0),ip,nw_dst=10.11.12.13 actions=drop
- priority=1,packet_type=(0,0),tcp6 actions=drop
- priority=2,packet_type=(0,0),arp,arp_tpa=10.11.12.13 actions=drop
- priority=2,packet_type=(0,0),dl_src=11:22:33:44:55:66,dl_type=0x4567 actions=drop
+ priority=1,dl_src=11:22:33:44:55:66,dl_type=0x1234 actions=drop
+ priority=1,ip,nw_dst=10.11.12.13 actions=drop
+ priority=1,tcp6 actions=drop
+ priority=2,arp,arp_tpa=10.11.12.13 actions=drop
+ priority=2,dl_src=11:22:33:44:55:66,dl_type=0x4567 actions=drop
  priority=3,packet_type=(1,0x800),nw_dst=10.11.12.13 actions=drop
  priority=3,packet_type=(1,0x806),arp_tpa=10.11.12.13 actions=drop
  priority=3,packet_type=(1,0x86dd),ipv6_dst=1234:5678::/32 actions=drop

@@ -3483,12 +3483,6 @@ ofproto_packet_out_init(struct ofproto *ofproto,
         return OFPERR_OFPBRC_BUFFER_UNKNOWN;
     }
 
-    /* NON-PTAP bridge should accept only Ethernet packet. */
-    if (!ofproto->packet_type_aware &&
-        po->flow_metadata.flow.packet_type != htonl(PT_ETH)) {
-        return OFPERR_OFPBRC_BAD_PACKET;
-    }
-
     /* Ensure that the L3 header is 32-bit aligned. */
     opo->packet = dp_packet_clone_data_with_headroom(po->packet,
                                                      po->packet_len, 2);

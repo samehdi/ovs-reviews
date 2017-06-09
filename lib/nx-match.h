@@ -28,6 +28,7 @@
 
 struct ds;
 struct match;
+struct nxm_put_ctx;
 struct ofpact_reg_move;
 struct ofpact_reg_load;
 struct ofpact_stack;
@@ -35,7 +36,6 @@ struct ofpbuf;
 struct nx_action_reg_load;
 struct nx_action_reg_move;
 struct vl_mff_map;
-
 
 /* Nicira Extended Match (NXM) flexible flow match helper functions.
  *
