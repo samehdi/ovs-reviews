@@ -3356,6 +3356,22 @@ compose_output_action__(struct xlate_ctx *ctx, ofp_port_t ofp_port,
         return;
     }
 
+    /* In a bridge that is not packet type-aware, convert the packet to what
+     * the output port expects. */
+    if (!ctx->xbridge->packet_type_aware) {
+        if (flow->packet_type == htonl(PT_ETH) && xport->is_layer3 ) {
+            /* Ethernet packet to L3 outport -> pop Ethernet header. */
+            flow->packet_type = PACKET_TYPE_BE(OFPHTN_ETHERTYPE,
+                                               ntohs(flow->dl_type));
+        } else if (flow->packet_type != htonl(PT_ETH) && !xport->is_layer3) {
+            /* L2 outport and non-Ethernet packet_type -> add dummy Ethernet
+             * header. */
+            flow->packet_type = htonl(PT_ETH);
+            flow->dl_dst = eth_addr_zero;
+            flow->dl_src = eth_addr_zero;
+        }
+    }
+
     if (xport->peer) {
         const struct xport *peer = xport->peer;
         struct flow old_flow = ctx->xin->flow;
@@ -3495,22 +3511,6 @@ compose_output_action__(struct xlate_ctx *ctx, ofp_port_t ofp_port,
 
     memcpy(flow_vlans, flow->vlans, sizeof flow_vlans);
     flow_nw_tos = flow->nw_tos;
-
-    /* In a bridge that is not packet type-aware convert the packet to what
-     * the output port expects. */
-    if (!ctx->xbridge->packet_type_aware) {
-        if (flow->packet_type == htonl(PT_ETH) && xport->is_layer3 ) {
-            /* Ethernet packet to L3 outport -> pop ethernet header. */
-            flow->packet_type = PACKET_TYPE_BE(OFPHTN_ETHERTYPE,
-                                               ntohs(flow->dl_type));
-        }
-        else if (flow->packet_type != htonl(PT_ETH) && !xport->is_layer3) {
-            /* L2 outport and non-ethernet packet_type -> add dummy eth header. */
-            flow->packet_type = htonl(PT_ETH);
-            flow->dl_dst = eth_addr_zero;
-            flow->dl_src = eth_addr_zero;
-        }
-    }
 
     if (count_skb_priorities(xport)) {
         memset(&wc->masks.skb_priority, 0xff, sizeof wc->masks.skb_priority);

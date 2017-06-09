@@ -933,6 +933,9 @@ struct ofproto_class {
      * can be triggered. */
     void (*set_tables_version)(struct ofproto *ofproto, ovs_version_t version);
 
+    /* Called when 'ofproto->packet_type_aware' has changed. */
+    void (*packet_type_aware_changed)(struct ofproto *ofproto);
+
 /* ## ---------------- ## */
 /* ## ofport Functions ## */
 /* ## ---------------- ## */

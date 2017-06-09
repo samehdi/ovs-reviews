@@ -1792,6 +1792,14 @@ set_tables_version(struct ofproto *ofproto_, ovs_version_t version)
     ofproto->backer->need_revalidate = REV_FLOW_TABLE;
 }
 
+static void
+packet_type_aware_changed(struct ofproto *ofproto_)
+{
+    struct ofproto_dpif *ofproto = ofproto_dpif_cast(ofproto_);
+
+    ofproto->backer->need_revalidate = REV_RECONFIGURE;
+}
+
 static struct ofport *
 port_alloc(void)
 {
@@ -5644,6 +5652,7 @@ const struct ofproto_class ofproto_dpif_class = {
     flush,
     query_tables,
     set_tables_version,
+    packet_type_aware_changed,
     port_alloc,
     port_construct,
     port_destruct,

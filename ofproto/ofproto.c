@@ -787,7 +787,12 @@ ofproto_set_dp_desc(struct ofproto *p, const char *dp_desc)
 void
 ofproto_set_packet_type_aware(struct ofproto *p, bool pta)
 {
-    p->packet_type_aware = pta;
+    if (pta != p->packet_type_aware) {
+        p->packet_type_aware = pta;
+        if (p->ofproto_class->packet_type_aware_changed) {
+            p->ofproto_class->packet_type_aware_changed(p);
+        }
+    }
 }
 
 int
