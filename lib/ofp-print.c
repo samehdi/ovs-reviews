@@ -218,9 +218,9 @@ ofp_print_packet_in(struct ds *string, const struct ofp_header *oh,
     }
 
     if (verbosity > 0) {
-        char *packet = ofp_packet_to_string(public->packet,
-                                            public->packet_len,
-                                            public->flow_metadata.flow.packet_type);
+        char *packet = ofp_packet_to_string(
+            public->packet, public->packet_len,
+            public->flow_metadata.flow.packet_type);
         ds_put_cstr(string, packet);
         free(packet);
     }

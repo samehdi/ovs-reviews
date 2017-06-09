@@ -4295,11 +4295,6 @@ execute_controller_action(struct xlate_ctx *ctx, int len,
     };
     flow_get_metadata(&ctx->xin->flow, &am->pin.up.public.flow_metadata);
 
-    /* Send packet_type only from packet-type-aware bridges. */
-    if (!ctx->xbridge->packet_type_aware) {
-        am->pin.up.public.flow_metadata.wc.masks.packet_type = 0;
-    }
-
     /* Async messages are only sent once, so if we send one now, no
      * xlate cache entry is created.  */
     if (ctx->xin->allow_side_effects) {
