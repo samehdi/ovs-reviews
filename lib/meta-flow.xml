@@ -314,6 +314,8 @@ tcp,tp_src=0x07c0/0xfff0
   </p>
 
   <dl>
+    <dt><code>eth</code></dt>
+    <dd><code>packet_type=(0,0)</code> (Open vSwitch 2.8 and later)</dd>
     <dt><code>ip</code></dt>     <dd><code>eth_type=0x0800</code></dd>
     <dt><code>ipv6</code></dt>   <dd><code>eth_type=0x86dd</code></dd>
     <dt><code>icmp</code></dt>   <dd><code>eth_type=0x0800,ip_proto=1</code></dd>

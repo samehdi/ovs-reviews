@@ -416,6 +416,8 @@ parse_ofp_str__(struct ofputil_flow_mod *fm, int command, char *string,
             if (p->nw_proto) {
                 match_set_nw_proto(&fm->match, p->nw_proto);
             }
+        } else if (!strcmp(name, "eth")) {
+            match_set_packet_type(&fm->match, htonl(PT_ETH));
         } else if (fields & F_FLAGS && !strcmp(name, "send_flow_rem")) {
             fm->flags |= OFPUTIL_FF_SEND_FLOW_REM;
         } else if (fields & F_FLAGS && !strcmp(name, "check_overlap")) {
