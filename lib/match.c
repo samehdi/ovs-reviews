@@ -506,6 +506,14 @@ match_has_default_packet_type(const struct match *match)
 }
 
 void
+match_add_ethernet_prereq(struct match *match, const struct mf_field *field)
+{
+    if (field->prereqs != MFP_NONE) {
+        match_set_default_packet_type(match);
+    }
+}
+
+void
 match_set_dl_type(struct match *match, ovs_be16 dl_type)
 {
     match->wc.masks.dl_type = OVS_BE16_MAX;

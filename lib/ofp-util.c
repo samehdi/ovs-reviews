@@ -160,7 +160,19 @@ ofputil_match_from_ofp10_match(const struct ofp10_match *ofmatch,
     memset(&match->flow, 0, sizeof match->flow);
     ofputil_wildcard_from_ofpfw10(ofpfw, &match->wc);
     memset(&match->tun_md, 0, sizeof match->tun_md);
-    match_set_default_packet_type(match);
+
+    /* If any fields, except in_port, are matched, then we also need to match
+     * on the Ethernet packet_type. */
+    const uint32_t ofpfw_data_bits = (OFPFW10_NW_TOS | OFPFW10_NW_PROTO
+                                      | OFPFW10_TP_SRC | OFPFW10_TP_DST
+                                      | OFPFW10_DL_SRC | OFPFW10_DL_DST
+                                      | OFPFW10_DL_TYPE
+                                      | OFPFW10_DL_VLAN | OFPFW10_DL_VLAN_PCP);
+    if ((ofpfw & ofpfw_data_bits) != ofpfw_data_bits
+        || ofputil_wcbits_to_netmask(ofpfw >> OFPFW10_NW_SRC_SHIFT)
+        || ofputil_wcbits_to_netmask(ofpfw >> OFPFW10_NW_DST_SHIFT)) {
+        match_set_default_packet_type(match);
+    }
 
     /* Initialize most of match->flow. */
     match->flow.nw_src = ofmatch->nw_src;
@@ -330,7 +342,6 @@ ofputil_match_from_ofp11_match(const struct ofp11_match *ofmatch,
 
     match_init_catchall(match);
     match->flow.tunnel.metadata.tab = NULL;
-    match_set_default_packet_type(match);
 
     if (!(wc & OFPFW11_IN_PORT)) {
         ofp_port_t ofp_port;
@@ -343,10 +354,13 @@ ofputil_match_from_ofp11_match(const struct ofp11_match *ofmatch,
         match_set_in_port(match, ofp_port);
     }
 
-    match_set_dl_src_masked(match, ofmatch->dl_src,
-                            eth_addr_invert(ofmatch->dl_src_mask));
-    match_set_dl_dst_masked(match, ofmatch->dl_dst,
-                            eth_addr_invert(ofmatch->dl_dst_mask));
+    struct eth_addr dl_src_mask = eth_addr_invert(ofmatch->dl_src_mask);
+    struct eth_addr dl_dst_mask = eth_addr_invert(ofmatch->dl_dst_mask);
+    if (!eth_addr_is_zero(dl_src_mask) || !eth_addr_is_zero(dl_dst_mask)) {
+        match_set_dl_src_masked(match, ofmatch->dl_src, dl_src_mask);
+        match_set_dl_dst_masked(match, ofmatch->dl_dst, dl_dst_mask);
+        match_set_default_packet_type(match);
+    }
 
     if (!(wc & OFPFW11_DL_VLAN)) {
         if (ofmatch->dl_vlan == htons(OFPVID11_NONE)) {
@@ -378,11 +392,13 @@ ofputil_match_from_ofp11_match(const struct ofp11_match *ofmatch,
                 }
             }
         }
+        match_set_default_packet_type(match);
     }
 
     if (!(wc & OFPFW11_DL_TYPE)) {
         match_set_dl_type(match,
                           ofputil_dl_type_from_openflow(ofmatch->dl_type));
+        match_set_default_packet_type(match);
     }
 
     ipv4 = match->flow.dl_type == htons(ETH_TYPE_IP);
