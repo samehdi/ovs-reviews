@@ -2954,23 +2954,18 @@ format_odp_key_attr(const struct nlattr *a, const struct nlattr *ma,
         break;
 
     case OVS_KEY_ATTR_PACKET_TYPE: {
-        ovs_be32 packet_type = nl_attr_get_be32(a);
-        uint16_t ns = pt_ns(packet_type);
-        uint16_t ns_type = pt_ns_type(packet_type);
+        ovs_be32 value = nl_attr_get_be32(a);
+        ovs_be32 mask = ma ? nl_attr_get_be32(ma) : OVS_BE32_MAX;
 
-        if (!is_exact) {
-            ovs_be32 mask = nl_attr_get_be32(ma);
-            uint16_t mask_ns_type = pt_ns_type(mask);
+        ovs_be16 ns = htons(pt_ns(value));
+        ovs_be16 ns_mask = htons(pt_ns(mask));
+        format_be16(ds, "ns", ns, &ns_mask, verbose);
 
-            if (mask == 0) {
-                ds_put_format(ds, "ns=%u,id=*", ns);
-            } else {
-                ds_put_format(ds, "ns=%u,id=%#"PRIx16"/%#"PRIx16,
-                              ns, ns_type, mask_ns_type);
-            }
-        } else {
-            ds_put_format(ds, "ns=%u,id=%#"PRIx16, ns, ns_type);
-        }
+        ovs_be16 ns_type = pt_ns_type_be(value);
+        ovs_be16 ns_type_mask = pt_ns_type_be(mask);
+        format_be16(ds, "id", ns_type, &ns_type_mask, verbose);
+
+        ds_chomp(ds, ',');
         break;
     }
 
@@ -4313,6 +4308,15 @@ parse_odp_key_mask_attr(const char *s, const struct simap *port_names,
         SCAN_FIELD("tll=", eth, nd_tll);
     } SCAN_END(OVS_KEY_ATTR_ND);
 
+    struct packet_type {
+        ovs_be16 ns;
+        ovs_be16 id;
+    };
+    SCAN_BEGIN("packet_type(", struct packet_type) {
+        SCAN_FIELD("ns=", be16, ns);
+        SCAN_FIELD("id=", be16, id);
+    } SCAN_END(OVS_KEY_ATTR_PACKET_TYPE);
+
     /* Encap open-coded. */
     if (!strncmp(s, "encap(", 6)) {
         const char *start = s;
@@ -4345,50 +4349,6 @@ parse_odp_key_mask_attr(const char *s, const struct simap *port_names,
         nl_msg_end_nested(key, encap);
         if (mask) {
             nl_msg_end_nested(mask, encap_mask);
-        }
-
-        return s - start;
-    }
-
-    /* Packet_type open-coded. */
-    if (strncmp(s, "packet_type(", strlen("packet_type(")) == 0) {
-        const char *start = s;
-        ovs_be32 skey = 0;
-        ovs_be32 smask = 0;
-        int len;
-        uint16_t  ns = 0;
-        uint16_t  ns_type = 0;
-
-        s += strlen("packet_type(");
-        if (ovs_scan(s, "ns=%"SCNu16",id=%n", &ns, &len)){
-            if (len == 0) {
-                return -EINVAL;
-            }
-            s += len;
-            if (strncmp(s, "*", 1) == 0) {
-                s++;
-            } else if (ovs_scan(s, "0x%"SCNx16"%n", &ns_type, &len)) {
-                s += len;
-                skey = PACKET_TYPE_BE(ns, ns_type);
-                if ( *s == '/' ) {
-                    uint16_t  ns_type_mask = 0;
-                    if (ovs_scan(s, "/0x%"SCNx16"%n", &ns_type_mask, &len)) {
-                        s += len;
-                        smask = PACKET_TYPE_BE(ns, ns_type_mask);
-                    }
-                }
-            }
-
-            if (*s++ != ')') {
-                return -EINVAL;
-            }
-
-            nl_msg_put_unspec(key, OVS_KEY_ATTR_PACKET_TYPE, &skey,
-                              sizeof(skey));
-            if (mask) {
-                nl_msg_put_unspec(mask, OVS_KEY_ATTR_PACKET_TYPE, &smask,
-                                  sizeof(smask));
-            }
         }
 
         return s - start;

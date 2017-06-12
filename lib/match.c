@@ -483,6 +483,28 @@ match_set_packet_type(struct match *match, ovs_be32 packet_type)
     match->wc.masks.packet_type = OVS_BE32_MAX;
 }
 
+/* If 'match' does not match on any packet type, and it matches on at least
+ * some field, make it match on Ethernet packets (the default packet type, as
+ * specified by OpenFlow).
+ *
+ * The exception for "matches on at least some field" is because */
+void
+match_set_default_packet_type(struct match *match)
+{
+    if (!match->wc.masks.packet_type) {
+        match_set_packet_type(match, htonl(PT_ETH));
+    }
+}
+
+/* Returns true if 'match' matches only Ethernet packets (the default packet
+ * type, as specified by OpenFlow). */
+bool
+match_has_default_packet_type(const struct match *match)
+{
+    return (match->flow.packet_type == htonl(PT_ETH)
+            && match->wc.masks.packet_type == OVS_BE32_MAX);
+}
+
 void
 match_set_dl_type(struct match *match, ovs_be16 dl_type)
 {
@@ -1256,7 +1278,7 @@ match_format(const struct match *match,
         format_be16_masked(s, "ct_tp_dst", f->ct_tp_dst, wc->masks.ct_tp_dst);
     }
 
-    if (wc->masks.packet_type) {
+    if (wc->masks.packet_type && !match_has_default_packet_type(match)) {
         format_packet_type_masked(s, f->packet_type, wc->masks.packet_type);
         if (pt_ns(f->packet_type) == OFPHTN_ETHERTYPE) {
             dl_type = pt_ns_type_be(f->packet_type);

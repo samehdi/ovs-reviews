@@ -311,7 +311,8 @@ enum ofperr {
 /* ## OFPET_BAD_MATCH ## */
 /* ## --------------- ## */
 
-    /* OF1.1+(4,0).  Unsupported match type specified by the match */
+    /* NX1.0(4,264), OF1.1+(4,0).  Unsupported match type specified by the
+     * match */
     OFPERR_OFPBMC_BAD_TYPE,
 
     /* OF1.1+(4,1).  Length problem in match. */
